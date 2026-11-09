@@ -1,27 +1,37 @@
 # Deteksi Benih Padi
 
-Aplikasi Streamlit untuk mengunggah gambar dan mendeteksi benih Ciherang, IR64, dan Mentik. Bobot YOLOv5s dari run rice_yolov5s_v2 sudah tersedia di `models/yolov5s_best.pt`.
+Aplikasi Streamlit untuk mendeteksi benih padi varietas Ciherang, IR64, dan Mentik pada foto. Aplikasi menampilkan gambar asli, kotak prediksi, jumlah deteksi per varietas, dan unduhan gambar beranotasi.
 
-## Unggah ke GitHub
+## Struktur repositori
 
-1. Ekstrak paket ZIP.
-2. Buat repository GitHub bernama `deteksi-benih-padi`. Pilih Private untuk menyimpan bobot riset dalam repo pribadi. Aktifkan Add a README file agar repository mempunyai branch main.
-3. Di repository, pilih **Add file → Upload files**.
-4. Buka folder hasil ekstrak. Seret isi folder ke halaman unggah. Pastikan `app.py`, `requirements.txt`, `packages.txt`, `models/`, dan `yolov5/` berada di tingkat teratas repository.
-5. Klik **Commit changes**.
+| Lokasi | Isi |
+| --- | --- |
+| `app.py` | Antarmuka Streamlit, pemeriksaan gambar, integrasi inferensi, anotasi, dan ekspor hasil |
+| `.streamlit/config.toml` | Tema aplikasi dan batas unggah |
+| `models/yolov5s_best.pt` | Bobot YOLOv5s dari run `rice_yolov5s_v2` |
+| `vendor/yolov5_source.zip` | Salinan kode inferensi Ultralytics YOLOv5 beserta lisensinya |
+| `requirements.txt` dan `packages.txt` | Dependensi Python dan sistem untuk deployment |
 
-## Jalankan di Streamlit Community Cloud
+## Menjalankan aplikasi
 
-1. Buka https://share.streamlit.io/ dan masuk dengan akun GitHub yang punya akses ke repository.
-2. Pilih **Create app** dan opsi untuk memakai repository yang sudah ada.
-3. Pilih repository `deteksi-benih-padi`, branch `main`, dan **Main file path** `app.py`.
-4. Pada **Advanced settings**, pilih Python 3.12, kemudian pilih **Deploy**.
-5. Setelah aplikasi tampil, pilih YOLOv5s, unggah foto, lalu klik **Deteksi gambar**.
+Gunakan Python 3.12.
 
-Pilihan YOLO11n memerlukan bobot `models/yolo11n_best.pt` dari run YOLO11n Anda.
+```sh
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
+```
 
-## Sumber model
+Pada Streamlit Community Cloud, gunakan `app.py` sebagai **Main file path**. Untuk deployment yang sudah menunjuk ke `main` dan `app.py`, gunakan konfigurasi yang sama.
 
-Bobot YOLOv5s berasal dari folder Drive riset yang dibagikan. Salinan di sini memakai metadata jalur yang portabel. Data tensor bobot sama dengan checkpoint asli.
+## Panduan penggunaan
 
-Modul inferensi YOLOv5 berasal dari commit `cb2f17fd5d790cfdd0c07c25351904df9affbe6e` pada https://github.com/ultralytics/yolov5. Lisensi sumber tersedia di `yolov5/LICENSE`.
+1. Unggah foto JPG, PNG, atau WebP. Batas unggah 20 MB dan resolusi maksimal 24 megapiksel.
+2. Gunakan panel samping untuk mengatur ambang confidence dan IoU NMS bila diperlukan.
+3. Pilih **Jalankan deteksi** untuk melihat gambar asli, gambar beranotasi, dan jumlah prediksi per varietas.
+4. Pilih **Unduh gambar beranotasi** untuk menyimpan hasil. Nilai confidence menunjukkan keyakinan per prediksi.
+
+## Asal komponen
+
+- **Kode aplikasi** berada di `app.py` dan konfigurasi antarmuka di `.streamlit/config.toml`.
+- **Bobot terlatih YOLOv5s** berasal dari checkpoint `YOLOv5_Results/rice_yolov5s_v2/weights/best.pt` yang dibagikan rekan penelitian. Semua 358 penyimpanan tensor cocok dengan berkas sumber. Salinan repositori mengubah representasi metadata jalur untuk kompatibilitas. SHA-256 salinan repositori adalah `167c5434d0a88214c17fee237cd1ca663edb5482775166d03b28f97757c42d9a`.
+- **Kode YOLOv5 pihak ketiga** berasal dari [Ultralytics YOLOv5](https://github.com/ultralytics/yolov5/tree/cb2f17fd5d790cfdd0c07c25351904df9affbe6e). Arsip menyimpan `LICENSE` GNU AGPL versi 3 dan dokumentasi upstream.
