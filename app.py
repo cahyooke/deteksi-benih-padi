@@ -51,10 +51,16 @@ def load_model(checkpoint_stamp):
 
 
 def read_image(raw):
-    with Image.open(BytesIO(raw)) as opened:
-        if opened.width * opened.height > MAX_PIXELS:
-            raise ValueError("Resolusi gambar melebihi 24 megapiksel. Perkecil gambar lalu unggah kembali.")
-        return ImageOps.exif_transpose(opened).convert("RGB")
+    try:
+        with Image.open(BytesIO(raw)) as opened:
+            if opened.width * opened.height > MAX_PIXELS:
+                raise ValueError("Resolusi gambar melebihi 24 megapiksel. Perkecil gambar lalu unggah kembali.")
+            return ImageOps.exif_transpose(opened).convert("RGB")
+    except ModuleNotFoundError as exc:
+        if exc.name != "pi_heif":
+            raise
+        # Ultralytics may try an optional HEIF decoder after Pillow rejects a file.
+        raise ValueError("Gunakan gambar JPG, PNG, atau WebP yang valid.") from exc
 
 
 def predict(model, lock, image, confidence, iou):
@@ -97,73 +103,6 @@ def annotate(image, detections):
     return output
 
 
-STYLES = """
-<style>
-[data-testid="stMainBlockContainer"] {max-width: 65rem; padding-top: 3.4rem;}
-.seed-masthead {position: relative; overflow: hidden; isolation: isolate;
-  padding: 2rem clamp(1.25rem,5vw,3rem); border-radius: 1.15rem;
-  background: #172842; color: #fff8ed; margin-bottom: 1rem;}
-.seed-masthead h1 {color: #fff8ed; font-family: Georgia, serif;
-  font-size: clamp(2.1rem,5vw,3.6rem); line-height: 1.06; padding: .45rem 0 .65rem;}
-.seed-masthead p {max-width: 36rem; margin: 0; color: #e6edf6;}
-.seed-eyebrow {color: #ffd494; font-size: .75rem; font-weight: 750; letter-spacing: .14em;}
-.seed-mark {position: absolute; right: 1.4rem; top: 50%; width: 10rem;
-  transform: translateY(-50%); opacity: .75; z-index: -1; pointer-events: none;}
-.seed-step {color: #8a4b25; font-size: .72rem; font-weight: 750; letter-spacing: .12em;}
-.seed-status {border-left: 4px solid #bd7138; padding: .8rem 1rem;
-  border-radius: 0 .5rem .5rem 0; background: #f3e8d7; color: #25354c;}
-.seed-status p {margin: .25rem 0 0;}
-@media (max-width: 800px) {
-  .seed-mark {opacity: .24;}
-}
-</style>
-"""
-
-MASTHEAD = """
-<header class="seed-masthead">
-  <div class="seed-eyebrow">LAB CITRA PADI</div>
-  <h1>Deteksi Benih Padi</h1>
-  <p>Periksa lokasi butir dan prediksi varietas Ciherang, IR64, dan Mentik dari satu foto.</p>
-  <svg class="seed-mark" viewBox="0 0 160 160" aria-hidden="true" focusable="false">
-    <circle cx="80" cy="80" r="72" fill="none" stroke="#b98954" stroke-width="1"/>
-    <path d="M37 123c31-25 57-46 85-83" fill="none" stroke="#f3c582" stroke-width="2"/>
-    <g fill="#f3c582">
-      <path d="M49 106c-14-3-22-14-20-27 12 0 21 10 20 27Z"/>
-      <path d="M62 95c4-14 17-23 31-19-4 13-16 21-31 19Z"/>
-      <path d="M72 87c-13-5-19-19-15-31 13 4 19 16 15 31Z"/>
-      <path d="M84 76c5-15 18-22 31-18-5 13-18 21-31 18Z"/>
-      <path d="M93 65c-10-6-13-19-8-30 11 5 15 17 8 30Z"/>
-      <path d="M107 53c1-14 12-25 26-25-1 13-11 25-26 25Z"/>
-    </g>
-  </svg>
-</header>
-"""
-
-
-def render_guide():
-    st.subheader("Panduan penggunaan")
-    with st.container(border=True):
-        st.markdown(
-            "1. Gunakan foto tajam dengan pencahayaan merata dan latar yang polos. "
-            "Pastikan butir terlihat jelas.\n"
-            "2. Buka Pengaturan analisis untuk menyesuaikan ambang confidence bila diperlukan.\n"
-            "3. Unggah JPG, PNG, atau WebP, lalu pilih **Jalankan deteksi**.\n"
-            "4. Periksa kotak, label varietas, dan jumlah prediksi. "
-            "Anda bisa mengunduh gambar beranotasi dari panel hasil."
-        )
-    with st.expander("Cara membaca hasil"):
-        st.write(
-            "Confidence menunjukkan keyakinan model pada tiap prediksi. "
-            "Jumlah yang ditampilkan berasal dari prediksi yang lolos ambang tersebut. "
-            "Hasil demo pada satu foto berbeda dari metrik akurasi pada dataset uji."
-        )
-    with st.expander("Pengaturan inferensi"):
-        st.write(
-            "Naikkan ambang confidence untuk menyaring prediksi berkeyakinan rendah. "
-            "IoU NMS mengatur penyaringan kotak deteksi yang bertumpuk."
-        )
-
-
 def render_result(model_name, result, image, upload_name):
     if "error" in result:
         st.error(f"{model_name} gagal dijalankan. {result['error']}")
@@ -202,7 +141,12 @@ def render_result(model_name, result, image, upload_name):
     )
 
 
-def render_workspace():
+def main():
+    st.set_page_config(page_title="Deteksi Benih Padi", page_icon="🌾", layout="centered")
+    st.title("Deteksi Benih Padi")
+    st.write("Unggah foto untuk mendeteksi Ciherang, IR64, dan Mentik.")
+    st.caption(f"Model {MODEL_NAME}")
+
     stamp = None
     try:
         info = YOLOV5_WEIGHT.stat()
@@ -213,15 +157,18 @@ def render_workspace():
 
     if stamp is None:
         st.warning("Bobot YOLOv5s belum tersedia di lokasi yang ditentukan.")
-    with st.container(border=True):
-        st.markdown('<div class="seed-step">01 · MASUKAN</div>', unsafe_allow_html=True)
-        st.subheader("Unggah foto")
-        upload = st.file_uploader("Foto benih padi", type=["jpg", "jpeg", "png", "webp"])
-        st.caption("Gunakan foto tajam, cahaya merata, dan latar polos. Maksimal 20 MB dan 24 megapiksel.")
-        with st.expander("Pengaturan analisis"):
-            confidence = st.slider("Ambang confidence", 0.05, 0.95, 0.25, 0.05)
-            iou = st.slider("Ambang IoU untuk NMS", 0.10, 0.90, 0.45, 0.05)
-            st.caption(f"Model {MODEL_NAME} · {IMAGE_SIZE} piksel · maksimum {MAX_DETECTIONS:,} deteksi")
+    upload = st.file_uploader("Unggah foto benih padi", type=["jpg", "jpeg", "png", "webp"])
+    st.caption("Pilih foto tajam dengan latar polos. Maksimal 20 MB dan 24 megapiksel.")
+    with st.expander("Pengaturan deteksi"):
+        confidence = st.slider(
+            "Ambang confidence", 0.05, 0.95, 0.25, 0.05,
+            help="Naikkan ambang untuk menyaring prediksi dengan keyakinan rendah.",
+        )
+        iou = st.slider(
+            "Ambang IoU untuk NMS", 0.10, 0.90, 0.45, 0.05,
+            help="Mengatur penyaringan kotak deteksi yang saling bertumpuk.",
+        )
+        st.caption(f"Ukuran inferensi {IMAGE_SIZE} piksel.")
 
     image = None
     raw = None
@@ -258,29 +205,12 @@ def render_workspace():
         saved = {"key": key, "result": result}
         st.session_state["detection_result"] = saved
 
-    st.markdown('<div class="seed-step">02 · KELUARAN</div>', unsafe_allow_html=True)
-    st.subheader("Hasil deteksi")
-    if saved is None:
-        if image is not None:
-            st.image(image, caption="Pratinjau gambar asli", width=320)
-        st.markdown(
-            '<div class="seed-status"><strong>Hasil deteksi akan tampil di sini</strong>'
-            '<p>Unggah foto, lalu jalankan deteksi.</p></div>',
-            unsafe_allow_html=True,
-        )
-    else:
+    if saved is not None:
+        st.divider()
+        st.subheader("Hasil deteksi")
         render_result(MODEL_NAME, saved["result"], image, upload.name)
-
-
-def main():
-    st.set_page_config(page_title="Deteksi Benih Padi", page_icon="🌾", layout="wide")
-    st.markdown(STYLES, unsafe_allow_html=True)
-    st.markdown(MASTHEAD, unsafe_allow_html=True)
-    workspace, guide = st.tabs(["Analisis foto", "Panduan penggunaan"])
-    with workspace:
-        render_workspace()
-    with guide:
-        render_guide()
+    elif image is not None:
+        st.image(image, caption="Pratinjau foto", width=320)
 
 
 if __name__ == "__main__":

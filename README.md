@@ -26,7 +26,7 @@ Pada Streamlit Community Cloud, gunakan `app.py` sebagai **Main file path**. Unt
 ## Panduan penggunaan
 
 1. Unggah foto JPG, PNG, atau WebP. Batas unggah 20 MB dan resolusi maksimal 24 megapiksel.
-2. Buka **Pengaturan analisis** di bawah area unggah untuk mengatur ambang confidence dan IoU NMS bila diperlukan.
+2. Buka **Pengaturan deteksi** di bawah area unggah untuk mengatur ambang confidence dan IoU NMS bila diperlukan.
 3. Pilih **Jalankan deteksi** untuk melihat gambar asli, gambar beranotasi, dan jumlah prediksi per varietas.
 4. Pilih **Unduh gambar beranotasi** untuk menyimpan hasil. Nilai confidence menunjukkan keyakinan per prediksi.
 
