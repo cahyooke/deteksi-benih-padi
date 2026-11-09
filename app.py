@@ -99,30 +99,44 @@ def annotate(image, detections):
 
 STYLES = """
 <style>
-[data-testid="stMainBlockContainer"] {max-width: 78rem; padding-top: 3.7rem;}
-[data-testid="stSidebar"] {border-right: 1px solid #dce7df;}
-.rice-brand {padding: .85rem 1rem; border-left: 4px solid #277459;
-  border-radius: .65rem; background: #dcebe2; color: #193228; margin-bottom: .85rem;}
-.rice-brand strong {font-size: 1.02rem;}
-.rice-brand small {display: block; margin-top: .15rem; color: #3b6254;}
-.rice-hero {padding: 1.8rem 2rem; border: 1px solid #cde1d4;
-  border-radius: 1rem; background: linear-gradient(115deg,#deeee4,#f1f6ed);
-  color: #193228; margin-bottom: .85rem;}
-.rice-hero h1 {color: #193228; font-size: clamp(1.85rem,4vw,2.85rem);
-  line-height: 1.12; padding: .35rem 0 .55rem;}
-.rice-hero p {max-width: 44rem; color: #3b6254; margin-bottom: .7rem;}
-.rice-kicker {font-size: .73rem; font-weight: 750; letter-spacing: .13em;}
-.rice-chip {display: inline-block; font-size: .8rem; font-weight: 650;
-  margin: .2rem .32rem 0 0; padding: .25rem .65rem; border-radius: 2rem;
-  border: 1px solid #c0dac9; background: #f5faf6;}
-.rice-empty {text-align: center; padding: 1.65rem 1rem; border-radius: .8rem;
-  border: 1px dashed #aac8b6; background: #eaf2ec; color: #193228;}
-.rice-empty p {margin: .4rem 0 0; color: #3b6254;}
-@media (max-width: 640px) {
-  [data-testid="stMainBlockContainer"] {padding-top: 3rem;}
-  .rice-hero {padding: 1.25rem;}
+[data-testid="stMainBlockContainer"] {max-width: 65rem; padding-top: 3.4rem;}
+.seed-masthead {position: relative; overflow: hidden; isolation: isolate;
+  padding: 2rem clamp(1.25rem,5vw,3rem); border-radius: 1.15rem;
+  background: #172842; color: #fff8ed; margin-bottom: 1rem;}
+.seed-masthead h1 {color: #fff8ed; font-family: Georgia, serif;
+  font-size: clamp(2.1rem,5vw,3.6rem); line-height: 1.06; padding: .45rem 0 .65rem;}
+.seed-masthead p {max-width: 36rem; margin: 0; color: #e6edf6;}
+.seed-eyebrow {color: #ffd494; font-size: .75rem; font-weight: 750; letter-spacing: .14em;}
+.seed-mark {position: absolute; right: 1.4rem; top: 50%; width: 10rem;
+  transform: translateY(-50%); opacity: .75; z-index: -1; pointer-events: none;}
+.seed-step {color: #8a4b25; font-size: .72rem; font-weight: 750; letter-spacing: .12em;}
+.seed-status {border-left: 4px solid #bd7138; padding: .8rem 1rem;
+  border-radius: 0 .5rem .5rem 0; background: #f3e8d7; color: #25354c;}
+.seed-status p {margin: .25rem 0 0;}
+@media (max-width: 800px) {
+  .seed-mark {opacity: .24;}
 }
 </style>
+"""
+
+MASTHEAD = """
+<header class="seed-masthead">
+  <div class="seed-eyebrow">LAB CITRA PADI</div>
+  <h1>Deteksi Benih Padi</h1>
+  <p>Periksa lokasi butir dan prediksi varietas Ciherang, IR64, dan Mentik dari satu foto.</p>
+  <svg class="seed-mark" viewBox="0 0 160 160" aria-hidden="true" focusable="false">
+    <circle cx="80" cy="80" r="72" fill="none" stroke="#b98954" stroke-width="1"/>
+    <path d="M37 123c31-25 57-46 85-83" fill="none" stroke="#f3c582" stroke-width="2"/>
+    <g fill="#f3c582">
+      <path d="M49 106c-14-3-22-14-20-27 12 0 21 10 20 27Z"/>
+      <path d="M62 95c4-14 17-23 31-19-4 13-16 21-31 19Z"/>
+      <path d="M72 87c-13-5-19-19-15-31 13 4 19 16 15 31Z"/>
+      <path d="M84 76c5-15 18-22 31-18-5 13-18 21-31 18Z"/>
+      <path d="M93 65c-10-6-13-19-8-30 11 5 15 17 8 30Z"/>
+      <path d="M107 53c1-14 12-25 26-25-1 13-11 25-26 25Z"/>
+    </g>
+  </svg>
+</header>
 """
 
 
@@ -132,7 +146,7 @@ def render_guide():
         st.markdown(
             "1. Gunakan foto tajam dengan pencahayaan merata dan latar yang polos. "
             "Pastikan butir terlihat jelas.\n"
-            "2. Periksa model YOLOv5s dan atur ambang confidence di panel samping.\n"
+            "2. Buka Pengaturan analisis untuk menyesuaikan ambang confidence bila diperlukan.\n"
             "3. Unggah JPG, PNG, atau WebP, lalu pilih **Jalankan deteksi**.\n"
             "4. Periksa kotak, label varietas, dan jumlah prediksi. "
             "Anda bisa mengunduh gambar beranotasi dari panel hasil."
@@ -188,9 +202,7 @@ def render_result(model_name, result, image, upload_name):
     )
 
 
-def main():
-    st.set_page_config(page_title="Deteksi Benih Padi", page_icon="🌾", layout="wide")
-    st.markdown(STYLES, unsafe_allow_html=True)
+def render_workspace():
     stamp = None
     try:
         info = YOLOV5_WEIGHT.stat()
@@ -199,46 +211,17 @@ def main():
     else:
         stamp = (info.st_mtime_ns, info.st_size)
 
-    with st.sidebar:
-        st.markdown(
-            '<div class="rice-brand"><strong>Deteksi Benih Padi</strong>'
-            '<small>Ruang inspeksi varietas</small></div>',
-            unsafe_allow_html=True,
-        )
-        page = st.radio("Ruang kerja", ["Deteksi gambar", "Panduan penggunaan"])
-        st.divider()
-        st.subheader("Konfigurasi")
-        st.markdown(f"**Model aktif**  \n{MODEL_NAME}")
-        confidence = st.slider("Ambang confidence", 0.05, 0.95, 0.25, 0.05)
-        with st.expander("Pengaturan inferensi"):
-            iou = st.slider("Ambang IoU untuk NMS", 0.10, 0.90, 0.45, 0.05)
-            st.caption(f"Ukuran inferensi {IMAGE_SIZE} piksel. Maksimum 1.000 deteksi per gambar.")
-
-    st.caption(f"Ruang kerja / {page} · {MODEL_NAME}")
-    st.markdown(
-        '<section class="rice-hero"><div class="rice-kicker">INSPEKSI CITRA</div>'
-        '<h1>Deteksi Benih Padi</h1>'
-        '<p>Temukan lokasi butir dan lihat prediksi varietas pada foto yang Anda unggah.</p>'
-        '<span class="rice-chip">Ciherang</span><span class="rice-chip">IR64</span>'
-        '<span class="rice-chip">Mentik</span></section>',
-        unsafe_allow_html=True,
-    )
-    if page == "Panduan penggunaan":
-        render_guide()
-        return
-
     if stamp is None:
         st.warning("Bobot YOLOv5s belum tersedia di lokasi yang ditentukan.")
-    uploader, tips = st.columns([3, 2], gap="large")
-    with uploader:
-        with st.container(border=True):
-            st.subheader("Gambar untuk dianalisis")
-            upload = st.file_uploader("Unggah foto benih padi", type=["jpg", "jpeg", "png", "webp"])
-            st.caption("JPG, PNG, atau WebP · maksimal 20 MB dan 24 megapiksel")
-    with tips:
-        st.subheader("Siapkan foto Anda")
-        st.write("Pilih foto tajam dengan cahaya merata dan latar polos. Pisahkan butir agar kotak hasilnya mudah diperiksa.")
-        st.caption("Cara membaca confidence dan pengaturan tersedia di menu Panduan penggunaan.")
+    with st.container(border=True):
+        st.markdown('<div class="seed-step">01 · MASUKAN</div>', unsafe_allow_html=True)
+        st.subheader("Unggah foto")
+        upload = st.file_uploader("Foto benih padi", type=["jpg", "jpeg", "png", "webp"])
+        st.caption("Gunakan foto tajam, cahaya merata, dan latar polos. Maksimal 20 MB dan 24 megapiksel.")
+        with st.expander("Pengaturan analisis"):
+            confidence = st.slider("Ambang confidence", 0.05, 0.95, 0.25, 0.05)
+            iou = st.slider("Ambang IoU untuk NMS", 0.10, 0.90, 0.45, 0.05)
+            st.caption(f"Model {MODEL_NAME} · {IMAGE_SIZE} piksel · maksimum {MAX_DETECTIONS:,} deteksi")
 
     image = None
     raw = None
@@ -275,17 +258,29 @@ def main():
         saved = {"key": key, "result": result}
         st.session_state["detection_result"] = saved
 
-    st.subheader("Hasil inspeksi")
+    st.markdown('<div class="seed-step">02 · KELUARAN</div>', unsafe_allow_html=True)
+    st.subheader("Hasil deteksi")
     if saved is None:
         if image is not None:
             st.image(image, caption="Pratinjau gambar asli", width=320)
         st.markdown(
-            '<div class="rice-empty"><strong>Hasil deteksi akan tampil di sini</strong>'
+            '<div class="seed-status"><strong>Hasil deteksi akan tampil di sini</strong>'
             '<p>Unggah foto, lalu jalankan deteksi.</p></div>',
             unsafe_allow_html=True,
         )
     else:
         render_result(MODEL_NAME, saved["result"], image, upload.name)
+
+
+def main():
+    st.set_page_config(page_title="Deteksi Benih Padi", page_icon="🌾", layout="wide")
+    st.markdown(STYLES, unsafe_allow_html=True)
+    st.markdown(MASTHEAD, unsafe_allow_html=True)
+    workspace, guide = st.tabs(["Analisis foto", "Panduan penggunaan"])
+    with workspace:
+        render_workspace()
+    with guide:
+        render_guide()
 
 
 if __name__ == "__main__":
