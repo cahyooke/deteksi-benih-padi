@@ -141,11 +141,68 @@ def render_result(model_name, result, image, upload_name):
     )
 
 
+HEADER = """
+<style>
+[data-testid="stMainBlockContainer"] {
+    max-width: 62rem;
+    padding-top: clamp(2.75rem, 5vw, 4.25rem);
+}
+.rice-header {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding: clamp(1.25rem, 4vw, 2.25rem);
+    margin-bottom: .6rem;
+    border: 1px solid #d5e2f2;
+    border-top: 4px solid #315b91;
+    border-radius: .9rem;
+    background: linear-gradient(118deg, #f3f8ff 32%, #fbfcff 100%);
+    color: #182b46;
+}
+.rice-header h1 {
+    padding: .25rem 0 .5rem;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    line-height: 1.12;
+    color: #182b46;
+}
+.rice-header p { margin: 0; max-width: 35rem; color: #344d6c; }
+.rice-kicker { font-size: .78rem; font-weight: 700; letter-spacing: .09em; color: #355984; }
+.rice-varieties { display: flex; gap: .45rem; flex-wrap: wrap; margin-top: 1rem; }
+.rice-varieties span {
+    border: 1px solid #d5e2f2;
+    border-radius: 999px;
+    padding: .2rem .65rem;
+    background: #ffffff;
+    color: #243f62;
+    font-size: .85rem;
+}
+.rice-pattern {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: -1;
+    width: 29%;
+    background: repeating-linear-gradient(135deg, transparent 0 15px, #dce8f8 15px 16px);
+    mask-image: linear-gradient(to right, transparent, black);
+}
+@media (max-width: 640px) {
+    .rice-pattern { opacity: .45; }
+}
+</style>
+<header class="rice-header">
+    <div class="rice-pattern" aria-hidden="true"></div>
+    <div class="rice-kicker">DETEKSI CITRA &middot; YOLOv5s</div>
+    <h1>Deteksi Benih Padi</h1>
+    <p>Unggah foto benih padi untuk melihat lokasi dan varietas setiap butir yang terdeteksi.</p>
+    <div class="rice-varieties">
+        <span>Ciherang</span><span>IR64</span><span>Mentik</span>
+    </div>
+</header>
+"""
+
+
 def main():
     st.set_page_config(page_title="Deteksi Benih Padi", page_icon="🌾", layout="centered")
-    st.title("Deteksi Benih Padi")
-    st.write("Unggah foto untuk mendeteksi Ciherang, IR64, dan Mentik.")
-    st.caption(f"Model {MODEL_NAME}")
+    st.markdown(HEADER, unsafe_allow_html=True)
 
     stamp = None
     try:
@@ -157,18 +214,21 @@ def main():
 
     if stamp is None:
         st.warning("Bobot YOLOv5s belum tersedia di lokasi yang ditentukan.")
-    upload = st.file_uploader("Unggah foto benih padi", type=["jpg", "jpeg", "png", "webp"])
-    st.caption("Pilih foto tajam dengan latar polos. Maksimal 20 MB dan 24 megapiksel.")
-    with st.expander("Pengaturan deteksi"):
-        confidence = st.slider(
-            "Ambang confidence", 0.05, 0.95, 0.25, 0.05,
-            help="Naikkan ambang untuk menyaring prediksi dengan keyakinan rendah.",
-        )
-        iou = st.slider(
-            "Ambang IoU untuk NMS", 0.10, 0.90, 0.45, 0.05,
-            help="Mengatur penyaringan kotak deteksi yang saling bertumpuk.",
-        )
-        st.caption(f"Ukuran inferensi {IMAGE_SIZE} piksel.")
+    input_panel = st.container(border=True)
+    with input_panel:
+        st.subheader("Foto untuk dianalisis")
+        upload = st.file_uploader("Unggah foto benih padi", type=["jpg", "jpeg", "png", "webp"])
+        st.caption("Pilih foto tajam dengan latar polos. Maksimal 20 MB dan 24 megapiksel.")
+        with st.expander("Pengaturan deteksi"):
+            confidence = st.slider(
+                "Ambang confidence", 0.05, 0.95, 0.25, 0.05,
+                help="Naikkan ambang untuk menyaring prediksi dengan keyakinan rendah.",
+            )
+            iou = st.slider(
+                "Ambang IoU untuk NMS", 0.10, 0.90, 0.45, 0.05,
+                help="Mengatur penyaringan kotak deteksi yang saling bertumpuk.",
+            )
+            st.caption(f"Ukuran inferensi {IMAGE_SIZE} piksel.")
 
     image = None
     raw = None
@@ -191,7 +251,7 @@ def main():
         st.session_state.pop("detection_result", None)
         saved = None
 
-    if st.button("Jalankan deteksi", type="primary", disabled=image is None or stamp is None):
+    if input_panel.button("Jalankan deteksi", type="primary", disabled=image is None or stamp is None):
         st.session_state.pop("detection_result", None)
         with st.spinner(f"Menjalankan {MODEL_NAME}…"):
             try:
@@ -206,9 +266,9 @@ def main():
         st.session_state["detection_result"] = saved
 
     if saved is not None:
-        st.divider()
-        st.subheader("Hasil deteksi")
-        render_result(MODEL_NAME, saved["result"], image, upload.name)
+        with st.container(border=True):
+            st.subheader("Hasil deteksi")
+            render_result(MODEL_NAME, saved["result"], image, upload.name)
     elif image is not None:
         st.image(image, caption="Pratinjau foto", width=320)
 
