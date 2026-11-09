@@ -2,14 +2,20 @@ from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
 from threading import Lock
+from tempfile import TemporaryDirectory
+from zipfile import ZipFile
 
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont, ImageOps, UnidentifiedImageError
 
 ROOT = Path(__file__).resolve().parent
+YOLOV5_WEIGHT = ROOT / "models" / "yolov5s_best.pt"
+if not YOLOV5_WEIGHT.is_file():
+    YOLOV5_WEIGHT = ROOT / "Streamlit_Deteksi_Benih_Padi" / "models" / "yolov5s_best.pt"
+
 MODEL_FILES = {
     "YOLO11n": ROOT / "models" / "yolo11n_best.pt",
-    "YOLOv5s": ROOT / "models" / "yolov5s_best.pt",
+    "YOLOv5s": YOLOV5_WEIGHT,
 }
 YOLOV5_REPO = ROOT / "yolov5"
 CLASSES = {"ciherang", "ir64", "mentik"}
@@ -20,16 +26,26 @@ MAX_PIXELS = 24_000_000
 
 
 @st.cache_resource(show_spinner=False)
+def unpack_yolov5():
+    """Keep the bundled YOLOv5 source available throughout this process."""
+    directory = TemporaryDirectory(prefix="rice_yolov5_")
+    with ZipFile(ROOT / "yolov5_source.zip") as archive:
+        archive.extractall(directory.name)
+    return directory
+
+
+@st.cache_resource(show_spinner=False)
 def load_model(model_name, checkpoint_path, checkpoint_stamp):
     """Cache by checkpoint path and version so replacing a weight reloads it."""
     import torch
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     if model_name == "YOLOv5s":
-        if not (YOLOV5_REPO / "hubconf.py").is_file():
-            raise FileNotFoundError("Folder yolov5 belum tersedia. Ikuti langkah YOLOv5s di README.")
+        source = YOLOV5_REPO
+        if not (source / "hubconf.py").is_file():
+            source = Path(unpack_yolov5().name)
         model = torch.hub.load(
-            str(YOLOV5_REPO), "custom", path=checkpoint_path, source="local", device=device
+            str(source), "custom", path=checkpoint_path, source="local", device=device
         )
         model.eval()
     else:
