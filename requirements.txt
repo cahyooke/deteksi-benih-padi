@@ -1,0 +1,7 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.8.0+cpu
+torchvision==0.23.0+cpu
+streamlit>=1.40,<2
+Pillow>=10.3,<13
+ultralytics==8.4.208
+-r yolov5/requirements.txt
