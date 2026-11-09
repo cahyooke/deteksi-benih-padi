@@ -1,0 +1,2 @@
+Simpan bobot hasil training di sini dengan nama yolo11n_best.pt atau yolov5s_best.pt.
+Lihat README.md untuk lokasi best.pt pada notebook.
